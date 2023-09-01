@@ -1,70 +1,116 @@
 package frc.robot.subsystems.drive;
 
-import com.ctre.phoenix.sensors.Pigeon2;
 import com.revrobotics.CANSparkMax;
-import com.revrobotics.RelativeEncoder;
+import com.revrobotics.CANSparkMax.ControlType;
+import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
+import com.revrobotics.RelativeEncoder;
+import com.revrobotics.SparkMaxPIDController;
+import com.revrobotics.SparkMaxPIDController.ArbFFUnits;
 
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.Encoder;
+import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.SPI;
+import edu.wpi.first.wpilibj.SerialPort;
+import frc.robot.Constants;
+import frc.robot.util.SparkMAXBurnManager;
 
-public class DriveIOSparkMax implements DriveIO {
-  private static final double GEAR_RATIO = 6.0;
+public class DriveIOSparkMAX implements DriveIO {
 
-  private final CANSparkMax leftLeader;
-  private final CANSparkMax rightLeader;
-  private final CANSparkMax leftFollower;
-  private final CANSparkMax rightFollower;
-  private final RelativeEncoder leftEncoder;
-  private final RelativeEncoder rightEncoder;
+    private final boolean leftInverted;
+    private final boolean rightInverted;
+    private final CANSparkMax leftLeader;
+    private final CANSparkMax leftFollower;
+    private final CANSparkMax rightLeader;
+    private final CANSparkMax rightFollower;
 
-  private final Pigeon2 gyro;
+    private final double afterEncoderReduction;
+    private RelativeEncoder leftInternalEncoder;
+    private RelativeEncoder rightInternalEncoder;
+    private final SparkMaxPIDController leftPID;
+    private final SparkMaxPIDController rightPID;
 
-  public DriveIOSparkMax() {
-    leftLeader = new CANSparkMax(1, MotorType.kBrushless);
-    rightLeader = new CANSparkMax(2, MotorType.kBrushless);
-    leftFollower = new CANSparkMax(3, MotorType.kBrushless);
-    rightFollower = new CANSparkMax(4, MotorType.kBrushless);
+    public DriveIOSparkMAX () {
 
-    leftEncoder = leftLeader.getEncoder();
-    rightEncoder = rightLeader.getEncoder();
+        afterEncoderReduction = 1.0 / ((9.0 / 62.0) * (18.0 / 30.0));
+        leftInverted = true;
+        rightInverted = false;
+        leftLeader = new CANSparkMax(3, MotorType.kBrushless);
+        leftFollower = new CANSparkMax(12, MotorType.kBrushless);
+        rightLeader = new CANSparkMax(16, MotorType.kBrushless);
+        rightFollower = new CANSparkMax(15, MotorType.kBrushless);
 
-    leftLeader.restoreFactoryDefaults();
-    rightLeader.restoreFactoryDefaults();
-    leftFollower.restoreFactoryDefaults();
-    rightFollower.restoreFactoryDefaults();
+        leftPID = leftLeader.getPIDController();
+        rightPID = rightLeader.getPIDController();
 
-    leftLeader.setInverted(false);
-    rightLeader.setInverted(true);
-    leftFollower.follow(leftLeader, false);
-    rightFollower.follow(rightLeader, false);
+        leftInternalEncoder = leftLeader.getEncoder();
+        rightInternalEncoder = rightLeader.getEncoder();
+        if (SparkMAXBurnManager.shouldBurn()) {
+            leftLeader.restoreFactoryDefaults();
+            leftFollower.restoreFactoryDefaults();
+            rightLeader.restoreFactoryDefaults();
+            rightFollower.restoreFactoryDefaults();
+        }
 
-    leftLeader.enableVoltageCompensation(12.0);
-    rightLeader.enableVoltageCompensation(12.0);
-    leftLeader.setSmartCurrentLimit(30);
-    rightLeader.setSmartCurrentLimit(30);
+        leftFollower.follow(leftLeader);
+        rightFollower.follow(rightLeader);
 
-    leftLeader.burnFlash();
-    rightLeader.burnFlash();
-    leftFollower.burnFlash();
-    rightFollower.burnFlash();
+        leftLeader.setInverted(leftInverted);
+        rightLeader.setInverted(rightInverted);
 
-    gyro = new Pigeon2(0);
-  }
+        leftLeader.enableVoltageCompensation(12.0);
+        rightLeader.enableVoltageCompensation(12.0);
 
-  @Override
-  public void updateInputs(DriveIOInputs inputs) {
-    inputs.leftPositionRad = Units.rotationsToRadians(leftEncoder.getPosition() / GEAR_RATIO);
-    inputs.rightPositionRad = Units.rotationsToRadians(rightEncoder.getPosition() / GEAR_RATIO);
-    inputs.leftVelocityRadPerSec = Units.rotationsPerMinuteToRadiansPerSecond(
-        leftEncoder.getVelocity() / GEAR_RATIO);
-    inputs.rightVelocityRadPerSec = Units.rotationsPerMinuteToRadiansPerSecond(
-        rightEncoder.getVelocity() / GEAR_RATIO);
-    inputs.gyroYawRad = gyro.getYaw();
-  }
+        leftLeader.setSmartCurrentLimit(30);
+        leftFollower.setSmartCurrentLimit(30);
+        rightLeader.setSmartCurrentLimit(30);
+        rightFollower.setSmartCurrentLimit(30);
 
-  @Override
-  public void setVoltage(double leftVolts, double rightVolts) {
-    leftLeader.setVoltage(leftVolts);
-    rightLeader.setVoltage(rightVolts);
-  }
+        
+        leftLeader.setCANTimeout(0);
+        leftFollower.setCANTimeout(0);
+        rightLeader.setCANTimeout(0);
+        rightFollower.setCANTimeout(0);
+
+        if (SparkMAXBurnManager.shouldBurn()) {
+            leftLeader.burnFlash();
+            leftFollower.burnFlash();
+            rightLeader.burnFlash();
+            rightFollower.burnFlash();
+        }
+    }
+    
+    @Override
+    public void updateInputs(DriveIOInputs inputs) {
+        inputs.leftPositionRad =
+            Units.rotationsToRadians(leftInternalEncoder.getPosition())
+                / afterEncoderReduction;
+        inputs.rightPositionRad =
+            Units.rotationsToRadians(rightInternalEncoder.getPosition())
+                / afterEncoderReduction;
+        inputs.leftVelocityRadPerSec = Units.rotationsPerMinuteToRadiansPerSecond(
+            leftInternalEncoder.getVelocity()) / afterEncoderReduction;
+        inputs.rightVelocityRadPerSec = Units.rotationsPerMinuteToRadiansPerSecond(
+            rightInternalEncoder.getVelocity()) / afterEncoderReduction;
+        inputs.leftAppliedVolts =
+            leftLeader.getAppliedOutput() * RobotController.getBatteryVoltage();
+        inputs.rightAppliedVolts =
+            rightLeader.getAppliedOutput() * RobotController.getBatteryVoltage();
+    }
+
+    @Override
+    public void setVoltage(double leftVolts, double rightVolts) {
+        leftLeader.setVoltage(leftVolts);
+        rightLeader.setVoltage(rightVolts);
+    }
+
+    @Override
+    public void setBrakeMode(boolean enable) {
+        IdleMode mode = enable ? IdleMode.kBrake : IdleMode.kCoast;
+        leftLeader.setIdleMode(mode);
+        leftFollower.setIdleMode(mode);
+        rightLeader.setIdleMode(mode);
+        rightFollower.setIdleMode(mode);
+    }
 }

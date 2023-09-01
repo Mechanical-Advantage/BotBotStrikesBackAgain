@@ -1,74 +1,42 @@
 package frc.robot.subsystems.drive;
 
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.kinematics.DifferentialDriveKinematics;
+import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import org.littletonrobotics.junction.Logger;
 
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
-import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.drive.DifferentialDrive;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
-
 public class Drive extends SubsystemBase {
-  public static final double WHEEL_RADIUS_METERS = Units.inchesToMeters(3.0);
+    // constants
+    public static double trackwidth = 1.3; // meters (this is made up)
+    public static double encoderAfterReduction = 1.0 / ((9.0 / 62.0) * (18.0 / 30.0));
+    public static double wheelDiameter = 5.8074934358;
 
-  private final DriveIO io;
-  private final DriveIOInputsAutoLogged inputs = new DriveIOInputsAutoLogged();
-  private final DifferentialDriveOdometry odometry = new DifferentialDriveOdometry(new Rotation2d(), 0.0, 0.0);
+    private DriveIO driveIO;
+    private DriveIOInputsAutoLogged driveInputs = new DriveIOInputsAutoLogged();
+    private GyroIO gyroIO;
+    private GyroIOInputsAutoLogged gyroInputs = new GyroIOInputsAutoLogged();
+    
+    private DifferentialDriveKinematics kinematics;
+    private double leftDistanceMeters = 0.0, rightDistanceMeters = 0.0;
 
-  /** Creates a new Drive. */
-  public Drive(DriveIO io) {
-    this.io = io;
-  }
+    private Pose2d pose = new Pose2d();
 
-  @Override
-  public void periodic() {
-    io.updateInputs(inputs);
-    Logger.getInstance().processInputs("Drive", inputs);
+    public Drive(DriveIO driveIO, GyroIO gyroIO) {
+        this.driveIO = driveIO;
+        this.gyroIO = gyroIO;
 
-    // Update odometry and log the new pose
-    odometry.update(new Rotation2d(-inputs.gyroYawRad), getLeftPositionMeters(), getRightPositionMeters());
-    Logger.getInstance().recordOutput("Odometry", getPose());
-  }
+        kinematics = new DifferentialDriveKinematics(trackwidth);
+    }
 
-  /** Run open loop at the specified percentage. */
-  public void drivePercent(double leftPercent, double rightPercent) {
-    io.setVoltage(leftPercent * 12.0, rightPercent * 12.0);
-  }
+    @Override
+    public void periodic() {
+        gyroIO.updateInputs(gyroInputs);
+        Logger.getInstance().processInputs("Drive/Gyro", gyroInputs);
 
-  /** Run open loop based on stick positions. */
-  public void driveArcade(double xSpeed, double zRotation) {
-    var speeds = DifferentialDrive.arcadeDriveIK(xSpeed, zRotation, true);
-    io.setVoltage(speeds.left * 12.0, speeds.right * 12.0);
-  }
+        driveIO.updateInputs(driveInputs);
+        Logger.getInstance().processInputs("Drive/Drive", driveInputs);
 
-  /** Stops the drive. */
-  public void stop() {
-    io.setVoltage(0.0, 0.0);
-  }
-
-  /** Returns the current odometry pose in meters. */
-  public Pose2d getPose() {
-    return odometry.getPoseMeters();
-  }
-
-  /** Returns the position of the left wheels in meters. */
-  public double getLeftPositionMeters() {
-    return inputs.leftPositionRad * WHEEL_RADIUS_METERS;
-  }
-
-  /** Returns the position of the right wheels in meters. */
-  public double getRightPositionMeters() {
-    return inputs.rightPositionRad * WHEEL_RADIUS_METERS;
-  }
-
-  /** Returns the velocity of the left wheels in meters/second. */
-  public double getLeftVelocityMeters() {
-    return inputs.leftVelocityRadPerSec * WHEEL_RADIUS_METERS;
-  }
-
-  /** Returns the velocity of the right wheels in meters/second. */
-  public double getRightVelocityMeters() {
-    return inputs.rightVelocityRadPerSec * WHEEL_RADIUS_METERS;
-  }
+        
+    }
 }
