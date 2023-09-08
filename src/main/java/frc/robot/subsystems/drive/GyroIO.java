@@ -13,5 +13,5 @@ public interface GyroIO {
         public double gyroZAccelMetersPerSec2 = 0.0;
     }
 
-    public void updateInputs(GyroIOInputs inputs);
+    default public void updateInputs(GyroIOInputs inputs) {};
 }

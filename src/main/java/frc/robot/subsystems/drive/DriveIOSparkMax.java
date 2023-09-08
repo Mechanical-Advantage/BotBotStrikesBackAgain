@@ -28,11 +28,8 @@ public class DriveIOSparkMAX implements DriveIO {
     private final double afterEncoderReduction;
     private RelativeEncoder leftInternalEncoder;
     private RelativeEncoder rightInternalEncoder;
-    private final SparkMaxPIDController leftPID;
-    private final SparkMaxPIDController rightPID;
 
     public DriveIOSparkMAX () {
-
         afterEncoderReduction = 1.0 / ((9.0 / 62.0) * (18.0 / 30.0));
         leftInverted = true;
         rightInverted = false;
@@ -40,9 +37,6 @@ public class DriveIOSparkMAX implements DriveIO {
         leftFollower = new CANSparkMax(12, MotorType.kBrushless);
         rightLeader = new CANSparkMax(16, MotorType.kBrushless);
         rightFollower = new CANSparkMax(15, MotorType.kBrushless);
-
-        leftPID = leftLeader.getPIDController();
-        rightPID = rightLeader.getPIDController();
 
         leftInternalEncoder = leftLeader.getEncoder();
         rightInternalEncoder = rightLeader.getEncoder();

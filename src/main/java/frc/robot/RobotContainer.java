@@ -14,6 +14,11 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.StartEndCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.drive.DriveIO;
+import frc.robot.subsystems.drive.DriveIOSim;
+import frc.robot.subsystems.drive.DriveIOSparkMAX;
+import frc.robot.subsystems.drive.GyroIO;
 
 /**
  * This class is where the bulk of the robot should be declared. Since
@@ -24,6 +29,8 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
  */
 public class RobotContainer {
   // Subsystems
+  //TODO make final
+  private Drive drive;
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
@@ -38,14 +45,18 @@ public class RobotContainer {
     switch (Constants.currentMode) {
       // Real robot, instantiate hardware IO implementations
       case REAL:
+        drive = new Drive(new DriveIOSparkMAX(), new GyroIO() {});
         break;
 
       // Sim robot, instantiate physics sim IO implementations
       case SIM:
+        DriveIOSim driveIOSim = new DriveIOSim();
+        drive = new Drive(driveIOSim, driveIOSim.getGyroIO());
         break;
 
       // Replayed robot, disable IO implementations
       default:
+        drive = new Drive(new DriveIO() {}, new GyroIO() {});
         break;
     }
 
@@ -63,6 +74,11 @@ public class RobotContainer {
    * passing it to a {@link edu.wpi.first.wpilibj2.command.button.JoystickButton}.
    */
   private void configureButtonBindings() {
+    drive.setDefaultCommand(new RunCommand(() -> {
+      double forward = (controller.getRightTriggerAxis() - controller.getLeftTriggerAxis()) * 5.0;
+      double right = controller.getLeftX() * 4.0;
+      drive.setVoltage(forward + right, forward - right);
+    }, drive));
   }
 
   /**

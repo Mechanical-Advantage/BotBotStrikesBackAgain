@@ -18,9 +18,9 @@ public interface DriveIO {
     public double[] rightTempCelcius = new double[] {};
   }
 
-  public void updateInputs(DriveIOInputs inputs);
+  public default void updateInputs(DriveIOInputs inputs) {};
 
-  public default void setVoltage(double leftVolts, double rightVolts) {}
+  public default void setVoltage(double leftVolts, double rightVolts) {};
 
-  public default void setBrakeMode(boolean enabled) {}
+  public default void setBrakeMode(boolean enabled) {};
 }
