@@ -2,7 +2,6 @@ package frc.robot.subsystems.drive;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.kinematics.DifferentialDriveKinematics;
 import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -20,6 +19,11 @@ public class Drive extends SubsystemBase {
     private final GyroIOInputsAutoLogged gyroInputs = new GyroIOInputsAutoLogged();
 
     private DifferentialDriveOdometry odometry = new DifferentialDriveOdometry(new Rotation2d(), 0, 0);
+    private double lastLeftDistanceMeters = 0.0; 
+    private double lastRightDistanceMeters = 0.0;
+    private double lastYawAngleRads = 0.0;
+    private double leftDelta = 0.0;
+    private double rightDelta = 0.0;
 
     public Drive(DriveIO driveIO, GyroIO gyroIO) {
         this.driveIO = driveIO;
@@ -28,13 +32,21 @@ public class Drive extends SubsystemBase {
 
     @Override
     public void periodic() {
+        lastYawAngleRads = gyroInputs.gyroYawPositionRad;
         gyroIO.updateInputs(gyroInputs);
         Logger.getInstance().processInputs("Drive/Gyro", gyroInputs);
 
+        lastLeftDistanceMeters = getLeftDistanceMeters();
+        lastRightDistanceMeters = getRightDistanceMeters();
         driveIO.updateInputs(driveInputs);
         Logger.getInstance().processInputs("Drive/Drive", driveInputs);
 
         Rotation2d yaw = new Rotation2d(gyroInputs.gyroYawPositionRad);
+        leftDelta = getLeftDistanceMeters() - lastLeftDistanceMeters;
+        rightDelta = getRightDistanceMeters() - lastRightDistanceMeters;
+        if (!gyroInputs.gyroConnected) {
+            yaw = new Rotation2d(lastYawAngleRads + (rightDelta - leftDelta) / trackwidth);
+        }
         odometry.update(yaw, getLeftDistanceMeters(), getRightDistanceMeters());
         Logger.getInstance().recordOutput("Drive/Pose", getPose());
     }
@@ -58,6 +70,14 @@ public class Drive extends SubsystemBase {
 
     public double getRightDistanceMeters() {
         return driveInputs.rightPositionRad * wheelRadius;
+    }
+
+    public double getLeftMetersPerSecond() {
+        return leftDelta / 0.02; // TODO: Add constant for this
+    }
+
+    public double getRightMetersPerSecond() {
+        return rightDelta / 0.02;
     }
 
     public Pose2d getPose() {

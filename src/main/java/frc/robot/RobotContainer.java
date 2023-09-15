@@ -19,6 +19,9 @@ import frc.robot.subsystems.drive.DriveIO;
 import frc.robot.subsystems.drive.DriveIOSim;
 import frc.robot.subsystems.drive.DriveIOSparkMAX;
 import frc.robot.subsystems.drive.GyroIO;
+import frc.robot.subsystems.drive.GyroIONavX;
+import frc.robot.commands.FeedForwardCharacterization;
+import static frc.robot.commands.FeedForwardCharacterization.FeedForwardCharacterizationData;
 
 /**
  * This class is where the bulk of the robot should be declared. Since
@@ -45,7 +48,7 @@ public class RobotContainer {
     switch (Constants.currentMode) {
       // Real robot, instantiate hardware IO implementations
       case REAL:
-        drive = new Drive(new DriveIOSparkMAX(), new GyroIO() {});
+        drive = new Drive(new DriveIOSparkMAX(), new GyroIONavX());
         break;
 
       // Sim robot, instantiate physics sim IO implementations
@@ -61,7 +64,16 @@ public class RobotContainer {
     }
 
     // Set up auto routines
-    autoChooser.addDefaultOption("Do Nothing", new InstantCommand());
+    FeedForwardCharacterizationData leftData = new FeedForwardCharacterizationData("Left Data");
+    FeedForwardCharacterizationData rightData = new FeedForwardCharacterizationData("Right Data");
+    FeedForwardCharacterization ffCharacterization = new FeedForwardCharacterization(drive,
+     true,
+      leftData,
+       rightData,
+        drive::setVoltage,
+         drive::getLeftMetersPerSecond,
+          drive::getRightMetersPerSecond);
+    autoChooser.addDefaultOption("Feed Forward", ffCharacterization);
 
     // Configure the button bindings
     configureButtonBindings();
