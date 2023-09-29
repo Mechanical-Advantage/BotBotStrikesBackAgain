@@ -17,7 +17,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveIO;
 import frc.robot.subsystems.drive.DriveIOSim;
-import frc.robot.subsystems.drive.DriveIOSparkMAX;
+import frc.robot.subsystems.drive.DriveIOSparkMax;
 import frc.robot.subsystems.drive.GyroIO;
 import frc.robot.subsystems.drive.GyroIONavX;
 import frc.robot.commands.FeedForwardCharacterization;
@@ -48,7 +48,7 @@ public class RobotContainer {
     switch (Constants.currentMode) {
       // Real robot, instantiate hardware IO implementations
       case REAL:
-        drive = new Drive(new DriveIOSparkMAX(), new GyroIONavX());
+        drive = new Drive(new DriveIOSparkMax(), new GyroIONavX());
         break;
 
       // Sim robot, instantiate physics sim IO implementations

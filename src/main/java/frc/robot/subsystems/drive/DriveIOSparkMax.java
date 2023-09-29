@@ -16,7 +16,7 @@ import edu.wpi.first.wpilibj.SerialPort;
 import frc.robot.Constants;
 import frc.robot.util.SparkMAXBurnManager;
 
-public class DriveIOSparkMAX implements DriveIO {
+public class DriveIOSparkMax implements DriveIO {
 
     private final boolean leftInverted;
     private final boolean rightInverted;
@@ -29,7 +29,7 @@ public class DriveIOSparkMAX implements DriveIO {
     private RelativeEncoder leftInternalEncoder;
     private RelativeEncoder rightInternalEncoder;
 
-    public DriveIOSparkMAX () {
+    public DriveIOSparkMax () {
         afterEncoderReduction = 1.0 / ((9.0 / 62.0) * (18.0 / 30.0));
         leftInverted = true;
         rightInverted = false;
